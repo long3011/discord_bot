@@ -20,7 +20,6 @@ with open('TOKEN.txt') as f:
 @client.event
 async def on_ready():
     global home_channel
-
     print(f'We have logged in as {client.user}')
 
 @client.event
