@@ -1,0 +1,11 @@
+{
+"- #start/#restart": "Start/restart the bot",
+"- help": "View this command",
+"- change_start": "Change the bot start character spaces also count(this will be case sensitive)",
+"- hello": "Reply hello with the user\"s name ",
+"- echo": "Repeat what is said after" ,
+"- logs": "Set the logs channel to be sent the logs" ,
+"- lock": "Toggling locking the bot to be only used in the default channel or server-wide" ,
+"- long_reference": "Enable long reference, reply any message with the word \"long\" with long reference image",
+"- encrypt/decrypt": "Encrypt/decrypt your message with a special encryption type(be fast, the message will be deleted after 5 seconds)"
+}
