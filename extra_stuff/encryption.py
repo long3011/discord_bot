@@ -25,7 +25,6 @@ def encrypt(str):
         else:
             new_string += word_list[1][
                 word_list[0].index(i)]
-    print(new_string)
     return new_string
 
 
