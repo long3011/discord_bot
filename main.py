@@ -1,13 +1,11 @@
 import json
 from io import BytesIO
-import requests
 
 import discord
 from petpet import petpet
 
-
-from extra_stuff import encryption
-from server import Server
+from files import encryption
+from files import server
 #require pynacl
 
 # Set up Discord bot intents
@@ -19,7 +17,7 @@ intents.message_content = True
 long_reference_link="https://cdn.discordapp.com/attachments/972481920103489604/1334509425272160266/IS_THAT_A_LONG_REFERENCE.png?ex=679f6d40&is=679e1bc0&hm=736083076f1b99b16a492a0bb729067a4f09437a0b361e9679b5fec6e7db0f0c&"
 # Load bot token from a file
 try:
-    with open('../system_info/TOKEN.txt') as f:
+    with open('files/TOKEN.txt') as f:
         bot_token = f.readline()
         f.close()
 except FileNotFoundError:
@@ -45,7 +43,7 @@ class MyClient(discord.Client):
             return
         # Handle bot start/restart command
         if message.content.startswith('#start') or message.content.startswith('#restart'):
-            self.servers_list[message.guild] = Server(home_channel_guilds=message.channel)
+            self.servers_list[message.guild] = server.Server(home_channel_guilds=message.channel)
             await message.add_reaction('👋')
             await self.servers_list[message.guild].home_channel_guilds.send(
                 f'{self.servers_list[message.guild].home_channel_guilds.mention} will be the default channel for this server.')
@@ -63,7 +61,7 @@ class MyClient(discord.Client):
         command=message.content.replace(self.servers_list[message.guild].command_guilds,'').lstrip() #format the command text
 
         if command.startswith('restart'):
-            self.servers_list[message.guild] = Server(home_channel_guilds=message.channel)
+            self.servers_list[message.guild] = server.Server(home_channel_guilds=message.channel)
             await message.add_reaction('👋')
             await self.servers_list[message.guild].home_channel_guilds.send(
                 f'{self.servers_list[message.guild].home_channel_guilds.mention} will be the default channel for this server.')
@@ -89,7 +87,7 @@ class MyClient(discord.Client):
         # Display help command
         if command.startswith('help'):
             output=''
-            with open('../system_info/help_command.json') as f:
+            with open('files/help_command.json') as f:
                 helps = json.load(f)
             if len(command.split(' '))==1:
                 for help_command in helps:
@@ -143,12 +141,12 @@ class MyClient(discord.Client):
 
         if command.startswith('encrypt'):
             content = message.content.split('encrypt')[1].strip()
-            await message.channel.send(f'{encryption.encrypt(content)}',delete_after=5)
+            await message.channel.send(f'{encryption.encrypt(content)}', delete_after=5)
             await message.delete(delay=5)
 
         if command.startswith('decrypt'):
             content = message.content.split('decrypt')[1].strip()
-            await message.channel.send(f'{encryption.decrypt(content)}',delete_after=5)
+            await message.channel.send(f'{encryption.decrypt(content)}', delete_after=5)
             await message.delete(delay=5)
 
         if command.startswith('pet' or 'pat'):
