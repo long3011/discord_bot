@@ -1,9 +1,14 @@
-import discord
 import json
+from io import BytesIO
+import requests
+
+import discord
+from petpet import petpet
+
+
 from extra_stuff import encryption
 from server import Server
-from petpet import petpet
-from io import BytesIO
+#require pynacl
 
 # Set up Discord bot intents
 intents = discord.Intents.default()
@@ -154,6 +159,22 @@ class MyClient(discord.Client):
                 petpet.make(source, dest)
                 dest.seek(0)  # set the file pointer back to the beginning so it doesn't upload a blank file.
                 await message.channel.send(file=discord.File(dest, filename=f"{image[0]}-petpet.gif"))
+        if command.startswith('join'):
+            if message.author.voice is None:
+                await message.channel.send(f'You are not in a voice channel')
+            else:
+                voice_channel=message.author.voice.channel
+                self.servers_list[message.guild].voice_client=await voice_channel.connect()
+                print(self.servers_list[message.guild].voice_client)
+                print("a")
+
+        if command.startswith('leave'):
+            if message.author.voice is None:
+                await message.channel.send(f'You are not in a voice channel')
+            elif self.servers_list[message.guild].voice_client is None:
+                await message.channel.send(f'The bot is not connected to a voice channel')
+            else:
+                await self.servers_list[message.guild].voice_client.disconnect()
 
     # Event triggered when a reaction is added
     async def on_reaction_add(self,react, user):
