@@ -20,12 +20,18 @@ class Player(discord.ui.View):
 
     def value_check(self):
         self.value = 0
+        ace=0
         for j in self.cards:
             if j['number'] > 10:
                 a = 10
+            elif j['number'] == 1:
+                a =11
+                ace+=1
             else:
                 a = j['number']
             self.value += a
+        if self.value > 21:
+            self.value-=ace*10
 
     # different function to control cards, bets, and check for balance
     @discord.ui.button(label='Hit', style=discord.ButtonStyle.green)
@@ -81,6 +87,7 @@ class Turns(discord.ui.View):
         for i in self.current_turn.cards:
             card = f"./resources/cards_faces/{i['number']}_of_{i['suit']}.png"
             cards.append(card)
+        self.current_turn.value_check()
         dest = BytesIO()
         combine_images(cards, dest)
         dest.seek(0)
@@ -97,10 +104,14 @@ class Turns(discord.ui.View):
             prize_pool = 0
             out_players = sorted(self.players, key=lambda player: abs(21 - player.value))
             for i in out_players:
+                self.current_turn.value_check()
                 prize_pool += i.bet
                 if i.value >= 22:
                     out_players.remove(i)
                     out_players.append(i)
+                if i.value==21 and len(i.cards)==2:
+                    out_players.remove(i)
+                    out_players.insert(0, i)
             for i in out_players:
                 if out_players.index(i) == 0:
                     winning = round(2 / 3 * prize_pool, 2)
