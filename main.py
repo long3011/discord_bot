@@ -4,49 +4,57 @@ from io import BytesIO
 import discord
 from petpet import petpet
 
-from files import encryption, server, user
+from files import blackjack
+from files.modules import encryption
+from files.objects import user, server, bot_client
 
-#require pynacl
+# require pynacl
 
 # Set up Discord bot intents
 intents = discord.Intents.default()
 intents.message_content = True
 
-# Dictionary to store user data
 user_dict = {}
+
+
+def update_user_dict():
+    global user_dict
+    with open('resources/user_list.json', 'r') as file:
+        user_list = json.load(file)
+        for member in user_list.values():
+            user_dict[member["id"]] = user.User(member["id"], member["balance"])
+        file.close()
+
+
+update_user_dict()
 
 # Define the debugging server
 MY_GUILD = discord.Object(id=1087776751205232761)  # replace with own server id
 
 # Load bot token from a file
 try:
-    with open('random/TOKEN.txt') as f:
+    with open('resources/TOKEN.txt') as f:
         bot_token = f.readline()
         f.close()
 except FileNotFoundError:
     print('TOKEN.txt not found')
 
-class MyClient(discord.Client):
-    #initate variables for the bot
+
+class MyClient(bot_client.CustomClient):
+    # initate variables for the bot
     def __init__(self, servers_list=None):
         super().__init__(intents=intents)
         if servers_list is None:
             servers_list = {}
         self.servers_list = servers_list
-        self.tree = discord.app_commands.CommandTree(self)
 
     # Event triggered when the bot is ready
     async def on_ready(self):
-        #Triggered when the bot successfully connects to Discord.
-        print('we are in bois') # Bot startup confirmation
-
-    async def setup_hook(self):
-        # Syncs command tree to the guild.
-        self.tree.copy_global_to(guild=MY_GUILD)
-        await self.tree.sync(guild=MY_GUILD)
+        # Triggered when the bot successfully connects to Discord.
+        print('we are in bois')  # Bot startup confirmation
 
     # Event triggered when a message is sent in a server
-    async def on_message(self,message):
+    async def on_message(self, message):
 
         # Ignore messages from the bot itself
         if message.author == self.user:
@@ -71,7 +79,8 @@ class MyClient(discord.Client):
             return
 
         # Extract command from message
-        command=message.content.replace(self.servers_list[message.guild].command_guilds,'').lstrip() #format the command text
+        command = message.content.replace(self.servers_list[message.guild].command_guilds,
+                                          '').lstrip()  # format the command text
 
         if command.startswith('restart'):
             self.servers_list[message.guild] = server.Server(home_channel_guilds=message.channel)
@@ -84,7 +93,7 @@ class MyClient(discord.Client):
         if ("long" in message.content.lower()
                 and message.guild in self.servers_list
                 and self.servers_list[message.guild].long_ref):
-            long_reference = discord.File(fp="random/is_that_a_long_reference.png",
+            long_reference = discord.File(fp="resources/is_that_a_long_reference.png",
                                           filename="is_that_a_long_reference.png")
             await message.reply(file=long_reference, mention_author=False)
 
@@ -94,24 +103,25 @@ class MyClient(discord.Client):
 
         # Enforce channel lock if enabled
         if (message.guild in self.servers_list
-            and message.channel != self.servers_list[message.guild].home_channel_guilds
-            and self.servers_list[message.guild].bot_channel_lock):
-            await message.channel.send(f'The bot is active in {self.servers_list[message.guild].home_channel_guilds.mention}')
+                and message.channel != self.servers_list[message.guild].home_channel_guilds
+                and self.servers_list[message.guild].bot_channel_lock):
+            await message.channel.send(
+                f'The bot is active in {self.servers_list[message.guild].home_channel_guilds.mention}')
             return
 
         # Display help command
         if command.startswith('help'):
-            output= ''
-            with open('random/help_command.json') as f:
+            output = ''
+            with open('resources/help_command.json') as f:
                 helps = json.load(f)
-            if len(command.split(' '))==1:
+            if len(command.split(' ')) == 1:
                 for help_command in helps:
                     output += f'\n- {help_command}'
                 await message.channel.send(f'Default start command: #start'
                                            f'\nCommand prefix is: {self.servers_list[message.guild].command_guilds}'
                                            f'{output}')
             else:
-                help_for=command.split(' ')[1].strip()
+                help_for = command.split(' ')[1].strip()
                 if help_for in helps:
                     await message.channel.send(f'{help_for}: {helps[help_for]}')
                 else:
@@ -120,8 +130,9 @@ class MyClient(discord.Client):
         # Change command prefix
         if command.startswith('change_start'):
             if message.content.split('change_start')[1] != "":
-                self.servers_list[message.guild].command_guilds=message.content.split('change_start')[1].strip()
-                await message.channel.send(f'The command calling is now set to:{self.servers_list[message.guild].command_guilds}')
+                self.servers_list[message.guild].command_guilds = message.content.split('change_start')[1].strip()
+                await message.channel.send(
+                    f'The command calling is now set to:{self.servers_list[message.guild].command_guilds}')
             else:
                 await message.channel.send(f'Please provide a valid command')
 
@@ -131,7 +142,7 @@ class MyClient(discord.Client):
 
         # Echo user input
         if command.startswith('echo'):
-            echo_content=message.content.split('echo')[1]
+            echo_content = message.content.split('echo')[1]
             await message.channel.send(echo_content)
 
         # Set log channel
@@ -142,17 +153,17 @@ class MyClient(discord.Client):
 
         # Lock bot to a single channel
         if command.startswith('lock'):
-            self.servers_list[message.guild].bot_channel_lock=not self.servers_list[message.guild].bot_channel_lock
+            self.servers_list[message.guild].bot_channel_lock = not self.servers_list[message.guild].bot_channel_lock
             await message.channel.send(
                 f'The bot is locked to only be used in {self.servers_list[message.guild].home_channel_guilds.mention}'
-                ,delete_after=5)
+                , delete_after=5)
 
         # Toggle long reference replies
         if command.startswith('long_reference'):
-            self.servers_list[message.guild].long_ref= not self.servers_list[message.guild].long_ref
+            self.servers_list[message.guild].long_ref = not self.servers_list[message.guild].long_ref
             await message.channel.send(
                 f'long reference is now set to {self.servers_list[message.guild].long_ref}'
-                ,delete_after=5)
+                , delete_after=5)
 
         # Encrypt and decrypt commands using custom module
         if command.startswith('encrypt'):
@@ -165,7 +176,7 @@ class MyClient(discord.Client):
             await message.channel.send(f'{encryption.decrypt(content)}', delete_after=5)
             await message.delete(delay=5)
 
-        #pet command that return a gif of the user pfp being petted
+        # pet command that return a gif of the user pfp being petted
         if command.startswith('pet' or 'pat'):
             for person in message.mentions:
                 image = await person.display_avatar.read()
@@ -176,15 +187,15 @@ class MyClient(discord.Client):
                 await message.channel.send(file=discord.File(dest, filename=f"{image[0]}-petpet.gif"))
 
         # join a voice channel
-        #currently have no use
+        # currently have no use
         if command.startswith('join'):
             if message.author.voice is None:
                 await message.channel.send(f'You are not in a voice channel')
             else:
-                voice_channel=message.author.voice.channel
-                self.servers_list[message.guild].voice_client=await voice_channel.connect()
+                voice_channel = message.author.voice.channel
+                self.servers_list[message.guild].voice_client = await voice_channel.connect()
 
-        #leave the voice channel the bot is in
+        # leave the voice channel the bot is in
         if command.startswith('leave'):
             if message.author.voice is None:
                 await message.channel.send(f'You are not in a voice channel')
@@ -194,33 +205,32 @@ class MyClient(discord.Client):
                 await self.servers_list[message.guild].voice_client.disconnect()
 
     # Event triggered when a reaction is added
-    async def on_reaction_add(self,react, user):
+    async def on_reaction_add(self, react, user):
         if user == self.user:
             return
         if react.message.author != self.user:
             return
         if react.message.guild not in self.servers_list:
-            return  #ensure all the required channels exist before logging
+            return  # ensure all the required channels exist before logging
         await self.servers_list[react.message.guild].home_channel_guilds.send(f'{user.name}: {react.emoji}')
 
-
     # Event triggered when a message is deleted
-    async def on_message_delete(self,message):
+    async def on_message_delete(self, message):
         if message.author == self.user:
             return
         if (message.guild not in self.servers_list
                 or self.servers_list[message.guild].logs_channel_guilds is None):
-            return  #ensure all the required channels exist before logging
-        await self.servers_list[message.guild].logs_channel_guilds.send(f'{message.author.name} deleted: {message.content}')
-
+            return  # ensure all the required channels exist before logging
+        await self.servers_list[message.guild].logs_channel_guilds.send(
+            f'{message.author.name} deleted: {message.content}')
 
     # Event triggered when a message is edited
-    async def on_message_edit(self,before, after):
+    async def on_message_edit(self, before, after):
         if before.author == self.user:
             return
         if (before.guild not in self.servers_list
                 or self.servers_list[before.guild].logs_channel_guilds is None):
-            return  #ensure all the required channels exist before logging
+            return  # ensure all the required channels exist before logging
         await self.servers_list[before.guild].logs_channel_guilds.send(
             f'{after.author.name} edited: {before.content} -> {after.content}')
 
@@ -264,8 +274,26 @@ async def send(interaction: discord.Interaction, text_to_send: str):
 @discord.app_commands.describe(amount='The amount you want to bid')
 async def gamble(interaction: discord.Interaction, amount: int):
     """Gamble your money away"""
-    if interaction.user.id not in user_dict:
+    update_user_dict()
+    if interaction.user.id not in user_dict:  # create user if user not exist yet
         user_dict[interaction.user.id] = user.User(interaction.user.id)
+        new_user = {
+            "id": interaction.user.id,
+            "balance": 1000,
+        }
+        with open("resources/user_list.json", "r+") as outfile:
+            data = json.load(outfile)
+            data[str(interaction.user.id)] = new_user
+            outfile.seek(0)
+            json.dump(data, outfile, indent=4)
+            outfile.close()
+    if amount > user_dict[interaction.user.id].balance:  # make sure the user dont bid over the amount they have
+        await interaction.response.send_message(f'You dont have that much money,'
+                                                f'you only have {user_dict[interaction.user.id].balance} coins!')
+        return
+    if amount <= 0:  # make sure the user dont bid negative amount
+        await interaction.response.send_message(f'You cant bid that amount! >:(')
+        return
     gamba = user_dict[interaction.user.id].coin_flip(amount)
     if gamba:
         await interaction.response.send_message(f'You won {amount} coins! '
@@ -274,23 +302,65 @@ async def gamble(interaction: discord.Interaction, amount: int):
     else:
         await interaction.response.send_message(f'You lost :c'
                                                 f'\nYou now have {user_dict[interaction.user.id].balance} coins')
+    with open("resources/user_list.json", "r+") as outfile:
+        data = json.load(outfile)
+        data[str(interaction.user.id)] = user_dict[interaction.user.id].save_info()
+        outfile.seek(0)
+        json.dump(data, outfile, indent=4)
+        outfile.close()
 
 
 @client.tree.command()
 async def claim(interaction: discord.Interaction):
     """Get a free 1000 coins"""
-    if interaction.user.id not in user_dict:
+    update_user_dict()
+    if interaction.user.id not in user_dict:  # create user if user not exist yet
         user_dict[interaction.user.id] = user.User(interaction.user.id)
+        new_user = {
+            "id": interaction.user.id,
+            "balance": 1000,
+        }
+        with open("resources/user_list.json", "r+") as outfile:
+            data = json.load(outfile)
+            data[str(interaction.user.id)] = new_user
+            outfile.seek(0)
+            json.dump(data, outfile, indent=4)
+            outfile.close()
     user_dict[interaction.user.id].add_coin(1000)
+    with open("resources/user_list.json", "r+") as outfile:
+        data = json.load(outfile)
+        data[str(interaction.user.id)] = user_dict[interaction.user.id].save_info()
+        outfile.seek(0)
+        json.dump(data, outfile, indent=4)
+        outfile.close()
     await interaction.response.send_message('Added 1000 coins to your balance', ephemeral=True)
 
 
 @client.tree.command()
 async def bal(interaction: discord.Interaction):
     """Check your balance"""
-    if interaction.user.id not in user_dict:
+    update_user_dict()
+    if interaction.user.id not in user_dict:  # create user if user not exist yet
         user_dict[interaction.user.id] = user.User(interaction.user.id)
+        new_user = {
+            "id": interaction.user.id,
+            "balance": 1000,
+        }
+        with open("resources/user_list.json", "r+") as outfile:
+            data = json.load(outfile)
+            data[str(interaction.user.id)] = new_user
+            outfile.seek(0)
+            json.dump(data, outfile, indent=4)
+            outfile.close()
     await interaction.response.send_message(f'You have {user_dict[interaction.user.id].balance} coins', ephemeral=True)
+
+
+@client.tree.command()
+async def start_blackjack(interaction: discord.Interaction):
+    update_user_dict()
+    view = blackjack.BlackjackView(user_dict)
+    await interaction.response.send_message(f'balls', view=view)
+
 
 # Start the bot
 try:

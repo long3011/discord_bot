@@ -9,14 +9,14 @@ def encrypt(str):
     key = random.choices(ascii_string, k=3)
     str_index = 0
     for i in range(3):
-        a=ascii_string[str_index:ascii_string.index(sorted(key)[i])]
-        b=''.join(reversed(list(shuffled[str_index:ascii_string.index(sorted(key)[i])])))
-        shuffled = shuffled.replace(a,b)
+        a = ascii_string[str_index:ascii_string.index(sorted(key)[i])]
+        b = ''.join(reversed(list(shuffled[str_index:ascii_string.index(sorted(key)[i])])))
+        shuffled = shuffled.replace(a, b)
         str_index = ascii_string.index(sorted(key)[i]) + 1
-    x=ascii_string[str_index:len(ascii_string)]
-    y=''.join(reversed(list(shuffled[str_index:len(ascii_string)])))
-    shuffled = shuffled.replace(x,y)
-    #all of the above was to make the key and shuffling list
+    x = ascii_string[str_index:len(ascii_string)]
+    y = ''.join(reversed(list(shuffled[str_index:len(ascii_string)])))
+    shuffled = shuffled.replace(x, y)
+    # all of the above was to make the key and shuffling list
     word_list = [ascii_string, shuffled]
     new_string = ''.join(key)  # making return string
     for i in str:
